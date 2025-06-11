@@ -1,0 +1,217 @@
+{
+  "name": "My workflow 10",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "625b9556-c883-4b7d-9504-f93ef0e6b865",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Fvf86Hnoockhj9v1Pv2zQ5M5lk98y2D1Ab9QPMn5Pck",
+          "mode": "list",
+          "cachedResultName": "invoice",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Fvf86Hnoockhj9v1Pv2zQ5M5lk98y2D1Ab9QPMn5Pck/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Fvf86Hnoockhj9v1Pv2zQ5M5lk98y2D1Ab9QPMn5Pck/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        260,
+        0
+      ],
+      "id": "806e09cc-ceab-4069-b559-689cb7d7fb47",
+      "name": "Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Ni0NnMRRpafLnADj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=you are a invoice assitant , your task is to analyse the data of each person , and check for the due date and status , if the user is paid return only \"PAID\", if he is not paid , generate a mail to remind him , dont use the word paid in the mail , just return only the content\n\nUse the information below to generate a personalized, clear, and respectful email reminder:\n\nClient Name: {{ $json[\"Client Name\"] }}\nEmail: {{ $json[\"Email\"] }}\nInvoice Amount: {{ $json[\"Invoice Amount\"] }}\nDue Date: {{ $json[\"Due Date\"] }}\nStatus: {{ $json[\"Status\"] }}\n\nInstructions:\n- Only generate an email if the status is \"Unpaid\" and the due date is earlier than today.\n- The email should:\n  - Greet the client by name.\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        560,
+        0
+      ],
+      "id": "f14cd7ce-67f6-4bc5-8113-6cc4526b0ce3",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash-exp",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        560,
+        220
+      ],
+      "id": "f499d3d9-4eb3-45b9-8297-9f284803d33c",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "IsHv50nck6I2P5Ju",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Google Sheets').item.json.Email }}",
+        "subject": " Invoice Due",
+        "emailType": "text",
+        "message": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1280,
+        0
+      ],
+      "id": "b2f1d8a6-ce13-49bc-ac8e-b7f99420683b",
+      "name": "Gmail",
+      "webhookId": "549c9609-283b-4576-9792-c68ca0828c98",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "F7e0m7gxeKmIK1BQ",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3ad75710-4ecd-4300-8452-3802b0ee255e",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "PAID",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        0
+      ],
+      "id": "a884d18b-fc69-44a4-82f0-64fd0b1dad1e",
+      "name": "If"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "aebda4ab-2ecf-4d90-a4e5-fec97181f42d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b2e847aea1afbad20bc986fdcca4d73233c1a19e7b9e6c4bff5fd7fc4c14840c"
+  },
+  "id": "pv4z96SFbCPASUBm",
+  "tags": []
+}
